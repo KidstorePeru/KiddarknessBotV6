@@ -20,7 +20,6 @@ const getTimeLeft = (outDate) => {
   const end = new Date(outDate).getTime();
   const now = Date.now();
   const diff = end - now;
-
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -29,9 +28,7 @@ const getTimeLeft = (outDate) => {
 
 const getURLParams = () => {
   const params = new URLSearchParams(window.location.search);
-  return {
-    account_id: params.get('account_id')
-  };
+  return { account_id: params.get('account_id') };
 };
 
 function App() {
@@ -50,7 +47,6 @@ function App() {
       try {
         const response = await fetch('https://fortnite-api.com/v2/shop?language=es-419');
         const data = await response.json();
-
         const entries = data?.data?.entries || [];
         const categoryMap = {};
         let total = 0;
@@ -65,8 +61,7 @@ function App() {
             item.brItems?.[0]?.name ||
             item.instruments?.[0]?.name ||
             item.tracks?.[0]?.title ||
-            item.cars?.[0]?.name ||
-            'SIN NOMBRE';
+            item.cars?.[0]?.name || 'SIN NOMBRE';
 
           let imageUrl =
             item.newDisplayAsset?.renderImages?.[0]?.image ||
@@ -75,15 +70,13 @@ function App() {
             item.albumArt ||
             item.brItems?.[0]?.images?.icon ||
             item.cars?.[0]?.images?.large ||
-            item.tracks?.[0]?.albumArt ||
-            '';
+            item.tracks?.[0]?.albumArt || '';
 
           const rarity =
             item.brItems?.[0]?.rarity?.displayValue ||
             item.cars?.[0]?.rarity?.displayValue ||
             item.instruments?.[0]?.rarity?.displayValue ||
-            item.tracks?.[0]?.rarity?.displayValue ||
-            'Común';
+            item.tracks?.[0]?.rarity?.displayValue || 'Común';
 
           const rarityColor = getRarityColor(rarity);
 
@@ -112,9 +105,10 @@ function App() {
     const fetchUserInfo = async () => {
       if (!account_id) return;
       try {
-        const response = await fetch(`/user-info?account_id=${account_id}`);
+        const response = await fetch(`https://kiddarknessbot.up.railway.app/user-info?account_id=${account_id}`);
         const data = await response.json();
-        setUserInfo(data);
+        if (!data.error) setUserInfo(data);
+        else console.error("⚠️", data.error);
       } catch (error) {
         console.error('❌ Error al obtener datos del usuario:', error);
       }
@@ -187,7 +181,6 @@ function App() {
         })
       )}
 
-      {/* Sección de Compra/Regalo */}
       <div className="bg-gray-800 p-4 rounded-lg space-y-4 mt-10 max-w-xl mx-auto">
         <p className="text-lg font-semibold">🧾 Compra o regala un ítem</p>
 
