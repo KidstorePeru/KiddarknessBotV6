@@ -20,18 +20,20 @@ const getTimeLeft = (outDate) => {
   const end = new Date(outDate).getTime();
   const now = Date.now();
   const diff = end - now;
+
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
   return `${days}d ${hours}h ${minutes}m`;
 };
 
 const getURLParams = () => {
-  const search = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(window.location.search);
   return {
-    account_id: search.get("account_id"),
-    username: search.get("username"),
-    display_name: search.get("display_name")
+    account_id: params.get('account_id'),
+    username: params.get('username'),
+    display_name: params.get('display_name')
   };
 };
 
@@ -43,9 +45,8 @@ function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [friends, setFriends] = useState([]);
   const [creatorCode, setCreatorCode] = useState('KIDDX');
-
-  const user = getURLParams();
-  const vbuckBalance = 1800;
+  const [vbuckBalance] = useState(1800); // Simulado
+  const accountInfo = getURLParams();
 
   useEffect(() => {
     const fetchShop = async () => {
@@ -80,16 +81,6 @@ function App() {
             item.cars?.[0]?.images?.small ||
             item.tracks?.[0]?.albumArt ||
             '';
-
-          if (category === 'Momentos musicales' || category === 'Pistas de improvisación') {
-            itemName = item.tracks?.[0]?.title || 'SIN NOMBRE';
-            imageUrl = item.tracks?.[0]?.albumArt || '';
-          }
-
-          if (category === 'Rubius' && item.instruments?.length > 0) {
-            itemName = item.instruments[0].name || 'SIN NOMBRE';
-            imageUrl = item.instruments[0].images.large || item.instruments[0].images.small || '';
-          }
 
           const rarity =
             item.brItems?.[0]?.rarity?.displayValue ||
@@ -126,29 +117,23 @@ function App() {
     };
 
     const loadFriends = async () => {
-      if (!user.username) return;
-
       try {
-        const response = await fetch(`/friends/${user.username}.json`);
+        const response = await fetch('/friends.json'); // En el futuro lo puedes hacer dinámico con el account_id
         const data = await response.json();
         setFriends(data);
       } catch (error) {
-        console.warn('⚠️ No se pudieron cargar amigos para:', user.username);
+        console.error('Error al cargar amigos:', error);
       }
     };
 
     fetchShop();
     loadFriends();
-  }, [user.username]);
+  }, []);
 
   return (
     <div className="bg-gray-900 text-white min-h-screen p-6">
       <h1 className="text-2xl font-bold mb-2">TIENDA DE FORTNITE</h1>
-      {user.display_name && (
-        <p className="text-md mb-2 text-gray-300">
-          👤 Bienvenido, <strong>{user.display_name}</strong>
-        </p>
-      )}
+      <p className="text-sm text-gray-400 mb-1">Bienvenido, <strong>{accountInfo.display_name || 'Invitado'}</strong></p>
       <p className="text-sm text-gray-400 mb-4">Total de objetos: <strong>{totalCount}</strong></p>
 
       <input
@@ -165,7 +150,9 @@ function App() {
           const filteredItems = items.filter((item) =>
             item.name.toLowerCase().includes(searchTerm)
           );
+
           if (filteredItems.length === 0) return null;
+
           return (
             <div key={category} className="mb-10">
               <h2 className="text-xl font-bold mb-4 uppercase text-center">{category}</h2>
@@ -186,7 +173,6 @@ function App() {
         })
       )}
 
-      {/* CONTROLES DE COMPRA/REGALO */}
       <div className="bg-gray-800 p-4 rounded-lg space-y-4 mt-10 max-w-xl mx-auto">
         <p className="text-lg font-semibold">🧾 Compra o regala un ítem</p>
 
