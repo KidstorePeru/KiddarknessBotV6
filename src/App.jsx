@@ -32,8 +32,6 @@ const getURLParams = () => {
   const params = new URLSearchParams(window.location.search);
   return {
     account_id: params.get('account_id'),
-    username: params.get('username'),
-    display_name: params.get('display_name')
   };
 };
 
@@ -43,10 +41,9 @@ function App() {
   const [totalCount, setTotalCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
-  const [friends, setFriends] = useState([]);
   const [creatorCode, setCreatorCode] = useState('KIDDX');
-  const [vbuckBalance] = useState(1800); // Simulado
-  const accountInfo = getURLParams();
+  const [userInfo, setUserInfo] = useState(null);
+  const { account_id } = getURLParams();
 
   useEffect(() => {
     const fetchShop = async () => {
@@ -116,25 +113,32 @@ function App() {
       }
     };
 
-    const loadFriends = async () => {
+    const fetchUserInfo = async () => {
+      if (!account_id) return;
+
       try {
-        const response = await fetch('/friends.json'); // En el futuro lo puedes hacer dinámico con el account_id
+        const response = await fetch(`/user-info?account_id=${account_id}`);
         const data = await response.json();
-        setFriends(data);
+        setUserInfo(data);
       } catch (error) {
-        console.error('Error al cargar amigos:', error);
+        console.error('❌ Error al obtener datos del usuario:', error);
       }
     };
 
     fetchShop();
-    loadFriends();
-  }, []);
+    fetchUserInfo();
+  }, [account_id]);
 
   return (
     <div className="bg-gray-900 text-white min-h-screen p-6">
       <h1 className="text-2xl font-bold mb-2">TIENDA DE FORTNITE</h1>
-      <p className="text-sm text-gray-400 mb-1">Bienvenido, <strong>{accountInfo.display_name || 'Invitado'}</strong></p>
-      <p className="text-sm text-gray-400 mb-4">Total de objetos: <strong>{totalCount}</strong></p>
+
+      <p className="text-sm text-gray-400 mb-1">
+        Bienvenido, <strong>{userInfo?.display_name || 'Invitado'}</strong>
+      </p>
+      <p className="text-sm text-gray-400 mb-4">
+        Total de objetos: <strong>{totalCount}</strong>
+      </p>
 
       <input
         type="text"
@@ -182,7 +186,9 @@ function App() {
               Has seleccionado: <strong>{selectedItem.name}</strong> – {selectedItem.vBucks} V-Bucks
             </p>
 
-            <p><strong>Store:</strong> EpicPC ({vbuckBalance} V-Bucks)</p>
+            <p>
+              <strong>Store:</strong> EpicPC ({userInfo?.vbucks || 0} V-Bucks)
+            </p>
 
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2">
@@ -232,7 +238,7 @@ function App() {
                   }
                 >
                   <option value="">Selecciona un amigo</option>
-                  {friends.map((friend) => (
+                  {userInfo?.friends?.map((friend) => (
                     <option key={friend.id} value={friend.username}>
                       {friend.username}
                     </option>
