@@ -24,14 +24,13 @@ const getTimeLeft = (outDate) => {
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
   return `${days}d ${hours}h ${minutes}m`;
 };
 
 const getURLParams = () => {
   const params = new URLSearchParams(window.location.search);
   return {
-    account_id: params.get('account_id'),
+    account_id: params.get('account_id')
   };
 };
 
@@ -43,6 +42,7 @@ function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [creatorCode, setCreatorCode] = useState('KIDDX');
   const [userInfo, setUserInfo] = useState(null);
+  const [quantity, setQuantity] = useState(1);
   const { account_id } = getURLParams();
 
   useEffect(() => {
@@ -75,7 +75,6 @@ function App() {
             item.albumArt ||
             item.brItems?.[0]?.images?.icon ||
             item.cars?.[0]?.images?.large ||
-            item.cars?.[0]?.images?.small ||
             item.tracks?.[0]?.albumArt ||
             '';
 
@@ -96,10 +95,7 @@ function App() {
             rarityColor
           };
 
-          if (!categoryMap[category]) {
-            categoryMap[category] = [];
-          }
-
+          if (!categoryMap[category]) categoryMap[category] = [];
           categoryMap[category].push(newItem);
           total++;
         });
@@ -115,7 +111,6 @@ function App() {
 
     const fetchUserInfo = async () => {
       if (!account_id) return;
-
       try {
         const response = await fetch(`/user-info?account_id=${account_id}`);
         const data = await response.json();
@@ -129,16 +124,37 @@ function App() {
     fetchUserInfo();
   }, [account_id]);
 
+  const sendGift = async () => {
+    if (!selectedItem || !userInfo) return;
+
+    const payload = {
+      account_id: userInfo.account_id,
+      recipient: selectedItem.recipient || '',
+      cosmetic: selectedItem.name,
+      amount: quantity,
+      creator_code: creatorCode
+    };
+
+    try {
+      const res = await fetch('/send-gift', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+      alert(result.message || '✅ Operación completada');
+    } catch (err) {
+      alert('❌ Error al enviar el regalo.');
+      console.error(err);
+    }
+  };
+
   return (
     <div className="bg-gray-900 text-white min-h-screen p-6">
       <h1 className="text-2xl font-bold mb-2">TIENDA DE FORTNITE</h1>
-
-      <p className="text-sm text-gray-400 mb-1">
-        Bienvenido, <strong>{userInfo?.display_name || 'Invitado'}</strong>
-      </p>
-      <p className="text-sm text-gray-400 mb-4">
-        Total de objetos: <strong>{totalCount}</strong>
-      </p>
+      <p className="text-sm text-gray-400 mb-1">Bienvenido, <strong>{userInfo?.display_name || 'Invitado'}</strong></p>
+      <p className="text-sm text-gray-400 mb-4">Total de objetos: <strong>{totalCount}</strong></p>
 
       <input
         type="text"
@@ -151,23 +167,17 @@ function App() {
         <p className="text-center text-gray-400">Cargando tienda...</p>
       ) : (
         Object.entries(itemsByCategory).map(([category, items]) => {
-          const filteredItems = items.filter((item) =>
-            item.name.toLowerCase().includes(searchTerm)
-          );
-
-          if (filteredItems.length === 0) return null;
-
+          const filtered = items.filter(item => item.name.toLowerCase().includes(searchTerm));
+          if (!filtered.length) return null;
           return (
             <div key={category} className="mb-10">
               <h2 className="text-xl font-bold mb-4 uppercase text-center">{category}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-                {filteredItems.map((item, index) => (
+                {filtered.map((item, index) => (
                   <ItemCard
                     key={index}
                     item={item}
-                    onSelect={() =>
-                      setSelectedItem({ ...item, operation: 'buy', recipient: '' })
-                    }
+                    onSelect={() => setSelectedItem({ ...item, operation: 'buy', recipient: '' })}
                     selected={selectedItem?.name === item.name}
                   />
                 ))}
@@ -177,6 +187,7 @@ function App() {
         })
       )}
 
+      {/* Sección de Compra/Regalo */}
       <div className="bg-gray-800 p-4 rounded-lg space-y-4 mt-10 max-w-xl mx-auto">
         <p className="text-lg font-semibold">🧾 Compra o regala un ítem</p>
 
@@ -186,9 +197,7 @@ function App() {
               Has seleccionado: <strong>{selectedItem.name}</strong> – {selectedItem.vBucks} V-Bucks
             </p>
 
-            <p>
-              <strong>Store:</strong> EpicPC ({userInfo?.vbucks || 0} V-Bucks)
-            </p>
+            <p><strong>Store:</strong> EpicPC ({userInfo?.vbucks || 0} V-Bucks)</p>
 
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2">
@@ -222,7 +231,8 @@ function App() {
               <input
                 type="number"
                 min="1"
-                defaultValue="1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
                 className="w-full px-3 py-2 rounded bg-gray-700 border border-gray-600"
               />
             </div>
@@ -238,7 +248,7 @@ function App() {
                   }
                 >
                   <option value="">Selecciona un amigo</option>
-                  {userInfo?.friends?.map((friend) => (
+                  {userInfo?.friends?.map(friend => (
                     <option key={friend.id} value={friend.username}>
                       {friend.username}
                     </option>
@@ -259,15 +269,7 @@ function App() {
             </div>
 
             <button
-              onClick={() => {
-                const op = selectedItem.operation || "buy";
-                const to = selectedItem.recipient || "N/A";
-                const msg =
-                  op === "gift"
-                    ? `🎁 Has enviado '${selectedItem.name}' a ${to} usando el código ${creatorCode}`
-                    : `🛒 Has comprado '${selectedItem.name}' usando el código ${creatorCode}`;
-                alert(msg);
-              }}
+              onClick={sendGift}
               className="bg-blue-600 hover:bg-blue-700 mt-4 px-4 py-2 rounded font-semibold w-full"
             >
               Send
